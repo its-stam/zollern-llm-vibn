@@ -1,0 +1,234 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "US 9 Multi-Model Comparison Results",
+  "description": "Schema for the multi-model comparison output from US 9 pipeline. Enthaelt Metriken, Scores, Token-Verbrauch und Kosten fuer Claude, GPT und Gemini.",
+  "type": "object",
+  "required": [
+    "timestamp",
+    "scenario",
+    "modelle",
+    "metriken",
+    "bewertung",
+    "ranking"
+  ],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp des Vergleichslaufs"
+    },
+    "scenario": {
+      "type": "string",
+      "enum": ["phase1_analyse", "phase2_transform"],
+      "description": "Welches Szenario getestet wurde"
+    },
+    "cad_fixture": {
+      "type": "string",
+      "description": "Name der CAD-Fixture (z.B. Hochregallager_mit_RBG_v1)"
+    },
+    "modelle": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["name", "api_version", "modell_id"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["claude", "gpt", "gemini"]
+          },
+          "api_version": {
+            "type": "string",
+            "description": "API-Version (z.B. 2025-05-06 fuer Claude)"
+          },
+          "modell_id": {
+            "type": "string",
+            "description": "Exakte Modell-ID (z.B. claude-sonnet-4-20250506)"
+          }
+        }
+      }
+    },
+    "metriken": {
+      "type": "object",
+      "required": ["token_vergleich", "kosten_vergleich", "latenz_vergleich"],
+      "properties": {
+        "token_vergleich": {
+          "type": "object",
+          "description": "Token-Verbrauch pro Modell aggregiert",
+          "patternProperties": {
+            "^(claude|gpt|gemini)$": {
+              "type": "object",
+              "required": ["tokens_in", "tokens_out", "tokens_total"],
+              "properties": {
+                "tokens_in": { "type": "integer", "minimum": 0 },
+                "tokens_out": { "type": "integer", "minimum": 0 },
+                "tokens_total": { "type": "integer", "minimum": 0 },
+                "details": {
+                  "type": "object",
+                  "description": "Aufgeschluesselt nach Rolle",
+                  "patternProperties": {
+                    "^(agent_a|agent_b|agent_c|plan|renamer|typer|joint_config|logic_builder|validator|bericht)$": {
+                      "type": "object",
+                      "properties": {
+                        "tokens_in": { "type": "integer" },
+                        "tokens_out": { "type": "integer" },
+                        "tokens_total": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "kosten_vergleich": {
+          "type": "object",
+          "patternProperties": {
+            "^(claude|gpt|gemini)$": {
+              "type": "object",
+              "required": ["cost_input_usd", "cost_output_usd", "cost_total_usd"],
+              "properties": {
+                "cost_input_usd": { "type": "number", "minimum": 0 },
+                "cost_output_usd": { "type": "number", "minimum": 0 },
+                "cost_total_usd": { "type": "number", "minimum": 0 },
+                "cost_total_eur": { "type": "number", "minimum": 0 },
+                "exchange_rate": { "type": "number" }
+              }
+            }
+          }
+        },
+        "latenz_vergleich": {
+          "type": "object",
+          "patternProperties": {
+            "^(claude|gpt|gemini)$": {
+              "type": "object",
+              "required": ["total_ms", "avg_ms_per_call"],
+              "properties": {
+                "total_ms": { "type": "number", "minimum": 0 },
+                "avg_ms_per_call": { "type": "number", "minimum": 0 },
+                "details": {
+                  "type": "object",
+                  "description": "Latenz pro Rolle",
+                  "patternProperties": {
+                    "^(agent_a|agent_b|agent_c|plan|renamer|typer|joint_config|logic_builder|validator|bericht)$": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "bewertung": {
+      "type": "object",
+      "required": ["strukturelle_korrektheit", "halluzinationsrate", "token_effizienz", "qualitaet", "score_gesamt"],
+      "properties": {
+        "strukturelle_korrektheit": {
+          "type": "object",
+          "patternProperties": {
+            "^(claude|gpt|gemini)$": {
+              "type": "object",
+              "required": ["korrekt", "gesamt", "rate"],
+              "properties": {
+                "korrekt": { "type": "integer", "minimum": 0 },
+                "gesamt": { "type": "integer", "minimum": 0 },
+                "rate": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            }
+          }
+        },
+        "halluzinationsrate": {
+          "type": "object",
+          "patternProperties": {
+            "^(claude|gpt|gemini)$": {
+              "type": "object",
+              "required": ["erfunden", "gesamt", "rate"],
+              "properties": {
+                "erfunden": { "type": "integer", "minimum": 0 },
+                "gesamt": { "type": "integer", "minimum": 0 },
+                "rate": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            }
+          }
+        },
+        "token_effizienz": {
+          "type": "object",
+          "patternProperties": {
+            "^(claude|gpt|gemini)$": {
+              "type": "object",
+              "required": ["nutzbar", "gesamt", "rate"],
+              "properties": {
+                "nutzbar": { "type": "integer", "minimum": 0 },
+                "gesamt": { "type": "integer", "minimum": 0 },
+                "rate": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            }
+          }
+        },
+        "qualitaet": {
+          "type": "object",
+          "patternProperties": {
+            "^(claude|gpt|gemini)$": {
+              "type": "object",
+              "required": ["score"],
+              "properties": {
+                "score": { "type": "number", "minimum": 0, "maximum": 1 },
+                "anmerkung": { "type": "string" }
+              }
+            }
+          }
+        },
+        "score_gesamt": {
+          "type": "object",
+          "patternProperties": {
+            "^(claude|gpt|gemini)$": {
+              "type": "object",
+              "required": ["score", "details"],
+              "properties": {
+                "score": { "type": "number", "minimum": 0, "maximum": 1 },
+                "details": {
+                  "type": "object",
+                  "properties": {
+                    "strukturelle_korrektheit_weighted": { "type": "number" },
+                    "halluzinationsrate_weighted": { "type": "number" },
+                    "token_effizienz_weighted": { "type": "number" },
+                    "latenz_weighted": { "type": "number" },
+                    "kosten_weighted": { "type": "number" },
+                    "qualitaet_weighted": { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ranking": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["platz", "modell", "score"],
+        "properties": {
+          "platz": { "type": "integer", "minimum": 1, "maximum": 3 },
+          "modell": { "type": "string" },
+          "score": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "empfehlung": {
+      "type": "object",
+      "properties": {
+        "bestes_modell": { "type": "string" },
+        "begruendung": { "type": "string" },
+        "naechste_schritte": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

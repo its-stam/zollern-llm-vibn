@@ -1,0 +1,249 @@
+{
+  "name": "ZOLLERN – CAD → LLM → Simulationsbericht (v2)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-manual-trigger",
+      "name": "Start (Manuell)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [100, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// PLATZHALTER: Echte CAD-Datei hier einlesen.\n// Ersatz: STEP-Datei via pythonOCC parsen oder AML-XML einlesen.\n\n// Fiktive Beispielanlage: Förderer / Drehtisch (SCRUM-41)\nconst assembly = {\n  anlage: \"Foerderer_Drehtisch_v1\",\n  format_quelle: \"STEP (ISO 10303-21) – fiktiv\",\n  komponenten: [\n    { id: \"K001\", name: \"Hauptrahmen\", typ: \"Tragstruktur\", material: \"Stahl\", bbox: { x: 2000, y: 800, z: 600 }, kinder: [\"K002\",\"K003\",\"K004\"] },\n    { id: \"K002\", name: \"Foerderband_Links\", typ: \"Foerdertechnik\", material: \"Gummi/Stahl\", bbox: { x: 1800, y: 200, z: 100 }, kinder: [] },\n    { id: \"K003\", name: \"Foerderband_Rechts\", typ: \"Foerdertechnik\", material: \"Gummi/Stahl\", bbox: { x: 1800, y: 200, z: 100 }, kinder: [] },\n    { id: \"K004\", name: \"Drehtisch_Zentrum\", typ: \"Drehtisch\", material: \"Stahl\", bbox: { x: 600, y: 600, z: 200 }, kinder: [\"K005\",\"K006\"] },\n    { id: \"K005\", name: \"Antriebsmotor_Drehtisch\", typ: \"Antrieb\", material: \"Metall\", bbox: { x: 200, y: 200, z: 300 }, kinder: [] },\n    { id: \"K006\", name: \"Sensor_Endlage\", typ: \"Sensor\", material: \"Kunststoff/Metall\", bbox: { x: 50, y: 50, z: 80 }, kinder: [] }\n  ],\n  sps_variablen_bekannt: true,\n  kinematik_vorhanden: false\n};\n\nreturn [{ json: { assembly, assembly_json: JSON.stringify(assembly, null, 2) } }];"
+      },
+      "id": "node-cad-daten",
+      "name": "CAD-Daten vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2048, system: 'Du bist Simulationsexperte für fe.screen-sim V5. Klassifizierst CAD-Komponenten nach Funktion. Sprache: Deutsch. Antwortest ausschließlich über das bereitgestellte Tool.', tools: [{ name: 'submit_klassifikation', description: 'Reicht Klassifikationen ein.', input_schema: { type: 'object', properties: { komponenten: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, funktionsklasse: { type: 'string', enum: ['Foerdertechnik','Antrieb','Sensor','Tragstruktur','Drehtisch','Sonstiges'] }, begruendung: { type: 'string' } }, required: ['id','name','funktionsklasse','begruendung'] } } }, required: ['komponenten'] } }], tool_choice: { type: 'tool', name: 'submit_klassifikation' }, messages: [{ role: 'user', content: 'Klassifiziere folgende CAD-Assemblierung:\\n' + $json.assembly_json }] }) }}",
+        "options": {}
+      },
+      "id": "node-agent-a",
+      "name": "Agent A: Komponenten-Klassifikation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 200],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": { "id": "ANTHROPIC_CRED", "name": "Anthropic API Key" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tagged Wrapper: Tool-Use-Output extrahieren, Rolle setzen\nconst r = $json;\nlet payload;\ntry {\n  if (r.content) {\n    const tu = r.content.find(c => c.type === 'tool_use');\n    if (tu) payload = tu.input;\n    else if (r.content[0] && r.content[0].text) payload = { _raw_text: r.content[0].text };\n    else payload = { _error: 'Unbekanntes Response-Format', _raw: r };\n  } else {\n    payload = { _error: 'Keine content im Response', _raw: r };\n  }\n} catch (e) {\n  payload = { _error: e.message, _raw: r };\n}\nreturn [{ json: { rolle: 'klassifikation', payload, tokens_in: r.usage ? r.usage.input_tokens : null, tokens_out: r.usage ? r.usage.output_tokens : null } }];"
+      },
+      "id": "node-tag-a",
+      "name": "Tag A",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2048, system: 'Du bist Experte für fe.screen-sim V5 Importformate. Bewertest welche Container-Strukturen erzeugt werden sollen. SPS-Variablen-Definitionen und Anlagenverhalten sind NICHT dein Thema (übernimmt Agent C). Sprache: Deutsch. Antwortest ausschließlich über das bereitgestellte Tool.', tools: [{ name: 'submit_importformat', description: 'Reicht Importformat-Bewertung ein.', input_schema: { type: 'object', properties: { strukturen: { type: 'array', items: { type: 'object', properties: { name: { type: 'string', enum: ['Schaltschrank-Excel','PLCTAGS-Excel','Connectors-XML','AML'] }, machbarkeit: { type: 'string', enum: ['hoch','mittel','niedrig'] }, begruendung: { type: 'string' }, felder: { type: 'array', items: { type: 'string' } } }, required: ['name','machbarkeit','begruendung','felder'] } } }, required: ['strukturen'] } }], tool_choice: { type: 'tool', name: 'submit_importformat' }, messages: [{ role: 'user', content: 'Bewerte Import-Strukturen für folgende Assemblierung:\\n' + $json.assembly_json }] }) }}",
+        "options": {}
+      },
+      "id": "node-agent-b",
+      "name": "Agent B: Importformat-Bewertung",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 400],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": { "id": "ANTHROPIC_CRED", "name": "Anthropic API Key" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $json;\nlet payload;\ntry {\n  if (r.content) {\n    const tu = r.content.find(c => c.type === 'tool_use');\n    if (tu) payload = tu.input;\n    else if (r.content[0] && r.content[0].text) payload = { _raw_text: r.content[0].text };\n    else payload = { _error: 'Unbekanntes Response-Format', _raw: r };\n  } else {\n    payload = { _error: 'Keine content im Response', _raw: r };\n  }\n} catch (e) {\n  payload = { _error: e.message, _raw: r };\n}\nreturn [{ json: { rolle: 'importformat', payload, tokens_in: r.usage ? r.usage.input_tokens : null, tokens_out: r.usage ? r.usage.output_tokens : null } }];"
+      },
+      "id": "node-tag-b",
+      "name": "Tag B",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2048, system: 'Du bist Simulationsarchitekt für fe.screen-sim V5. Definierst Anlagenverhalten: Bewegungen, Sensoren, SPS-Variablen, manuelle Schritte. Container-Format-Auswahl ist NICHT dein Thema (übernimmt Agent B). WICHTIG: SPS-Adressen sind aus CAD nicht ableitbar. Setze adresse: TBD_SPS_Quelle_erforderlich. Erfinde keine Adressen. Sprache: Deutsch. Antwortest ausschließlich über das bereitgestellte Tool.', tools: [{ name: 'submit_simulationslogik', description: 'Reicht Simulationslogik ein.', input_schema: { type: 'object', properties: { bewegungen: { type: 'array', items: { type: 'object', properties: { komponente_id: { type: 'string' }, art: { type: 'string' }, beschreibung: { type: 'string' } }, required: ['komponente_id','art','beschreibung'] } }, sensor_trigger: { type: 'array', items: { type: 'object', properties: { sensor_id: { type: 'string' }, ausloeser: { type: 'string' } }, required: ['sensor_id','ausloeser'] } }, sps_variablen: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, datentyp: { type: 'string' }, adresse: { type: 'string' } }, required: ['name','datentyp','adresse'] } }, manuelle_schritte: { type: 'array', items: { type: 'string' } } }, required: ['bewegungen','sensor_trigger','sps_variablen','manuelle_schritte'] } }], tool_choice: { type: 'tool', name: 'submit_simulationslogik' }, messages: [{ role: 'user', content: 'Definiere Simulationslogik für folgende Assemblierung:\\n' + $json.assembly_json }] }) }}",
+        "options": {}
+      },
+      "id": "node-agent-c",
+      "name": "Agent C: Simulationslogik",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 600],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": { "id": "ANTHROPIC_CRED", "name": "Anthropic API Key" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $json;\nlet payload;\ntry {\n  if (r.content) {\n    const tu = r.content.find(c => c.type === 'tool_use');\n    if (tu) payload = tu.input;\n    else if (r.content[0] && r.content[0].text) payload = { _raw_text: r.content[0].text };\n    else payload = { _error: 'Unbekanntes Response-Format', _raw: r };\n  } else {\n    payload = { _error: 'Keine content im Response', _raw: r };\n  }\n} catch (e) {\n  payload = { _error: e.message, _raw: r };\n}\nreturn [{ json: { rolle: 'simulationslogik', payload, tokens_in: r.usage ? r.usage.input_tokens : null, tokens_out: r.usage ? r.usage.output_tokens : null } }];"
+      },
+      "id": "node-tag-c",
+      "name": "Tag C",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 600]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "id": "node-merge",
+      "name": "Merge Agenten",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [980, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Per Tag mappen statt per Position. Robust gegen Reihenfolge.\nconst items = $input.all().map(i => i.json);\nconst byRolle = (r) => items.find(i => i.rolle === r) || { payload: { _error: 'Rolle ' + r + ' fehlt' }, tokens_in: 0, tokens_out: 0 };\n\nconst k = byRolle('klassifikation');\nconst f = byRolle('importformat');\nconst s = byRolle('simulationslogik');\n\nconst tokens_total = items.reduce((sum, i) => sum + (i.tokens_in || 0) + (i.tokens_out || 0), 0);\n\nreturn [{\n  json: {\n    klassifikation_json: JSON.stringify(k.payload, null, 2),\n    importformat_json: JSON.stringify(f.payload, null, 2),\n    simulationslogik_json: JSON.stringify(s.payload, null, 2),\n    klassifikation_obj: k.payload,\n    importformat_obj: f.payload,\n    simulationslogik_obj: s.payload,\n    tokens_agenten: tokens_total,\n    anlage: 'Foerderer_Drehtisch_v1',\n    datum: new Date().toISOString().split('T')[0]\n  }\n}];"
+      },
+      "id": "node-aufbereitung",
+      "name": "Ergebnisse aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, system: 'Du bist technischer Redakteur für Machbarkeitsstudien (HS Albstadt-Sigmaringen, Projekt Zollern). Erstellst strukturierten Markdown-Bericht in präziser Fachsprache. Keine em dashes, keine passive Sprache, keine Filler. Sprache: Deutsch.', messages: [{ role: 'user', content: 'Erstelle Machbarkeitsbericht für Anlage \"' + $json.anlage + '\" (Datum: ' + $json.datum + ').\\n\\nDie drei Analysen liegen als JSON vor:\\n\\n## Analyse 1 – Komponenten-Klassifikation\\n```json\\n' + $json.klassifikation_json + '\\n```\\n\\n## Analyse 2 – Importformat-Bewertung\\n```json\\n' + $json.importformat_json + '\\n```\\n\\n## Analyse 3 – Simulationslogik\\n```json\\n' + $json.simulationslogik_json + '\\n```\\n\\nStruktur:\\n1. Executive Summary (3 Sätze)\\n2. Komponentenübersicht (Tabelle)\\n3. Empfehlung Importformat für fe.screen-sim V5\\n4. Simulationsstruktur-Vorschlag (Bewegungen, Sensoren, SPS)\\n5. Limitationen und offene Punkte\\n6. Nächste Schritte\\n\\nMarkdown-Format. Tabellen wo passend. Halluzinationen vermeiden: wenn Daten fehlen, vermerken statt erfinden.' }] }) }}",
+        "options": {}
+      },
+      "id": "node-bericht-generator",
+      "name": "Bericht-Generator (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1420, 400],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": { "id": "ANTHROPIC_CRED", "name": "Anthropic API Key" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Bericht extrahieren, Markdown + Sidecar-Meta auf Disk persistieren\nconst fs = require('fs');\nconst path = require('path');\n\nconst response = $json;\nlet bericht = '';\nlet usage = {};\ntry {\n  bericht = response.content[0].text;\n  usage = response.usage || {};\n} catch (e) {\n  bericht = '[FEHLER beim Bericht-Extrakt: ' + e.message + ']\\n\\nRoh-Response:\\n' + JSON.stringify(response, null, 2);\n}\n\nconst now = new Date();\nconst ts = now.toISOString().replace(/[:.]/g, '-').replace(/T/, '_').slice(0, 19);\nconst dir = '/Users/stm/Desktop/UNI/Master/1. Semester/Project Data Eng ZOLLERN/SCRUM-40/runs';\nfs.mkdirSync(dir, { recursive: true });\n\nconst mdPath = path.join(dir, ts + '.md');\nconst metaPath = path.join(dir, ts + '.meta.json');\n\nfs.writeFileSync(mdPath, bericht);\n\nconst meta = {\n  timestamp: now.toISOString(),\n  modell: 'claude-sonnet-4-6',\n  anlage: 'Foerderer_Drehtisch_v1',\n  tokens_summary: { input: usage.input_tokens || 0, output: usage.output_tokens || 0 },\n  pfad_bericht: mdPath\n};\nfs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));\n\nconsole.log('=== ZOLLERN BERICHT ===');\nconsole.log('Geschrieben: ' + mdPath);\nconsole.log(bericht);\n\nreturn [{ json: { bericht, status: 'persisted', pfad: mdPath, meta_pfad: metaPath, ...meta } }];"
+      },
+      "id": "node-ausgabe",
+      "name": "Bericht ausgeben + speichern",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1640, 400]
+    }
+  ],
+  "connections": {
+    "Start (Manuell)": {
+      "main": [[{ "node": "CAD-Daten vorbereiten", "type": "main", "index": 0 }]]
+    },
+    "CAD-Daten vorbereiten": {
+      "main": [[
+        { "node": "Agent A: Komponenten-Klassifikation", "type": "main", "index": 0 },
+        { "node": "Agent B: Importformat-Bewertung", "type": "main", "index": 0 },
+        { "node": "Agent C: Simulationslogik", "type": "main", "index": 0 }
+      ]]
+    },
+    "Agent A: Komponenten-Klassifikation": {
+      "main": [[{ "node": "Tag A", "type": "main", "index": 0 }]]
+    },
+    "Agent B: Importformat-Bewertung": {
+      "main": [[{ "node": "Tag B", "type": "main", "index": 0 }]]
+    },
+    "Agent C: Simulationslogik": {
+      "main": [[{ "node": "Tag C", "type": "main", "index": 0 }]]
+    },
+    "Tag A": {
+      "main": [[{ "node": "Merge Agenten", "type": "main", "index": 0 }]]
+    },
+    "Tag B": {
+      "main": [[{ "node": "Merge Agenten", "type": "main", "index": 1 }]]
+    },
+    "Tag C": {
+      "main": [[{ "node": "Merge Agenten", "type": "main", "index": 2 }]]
+    },
+    "Merge Agenten": {
+      "main": [[{ "node": "Ergebnisse aufbereiten", "type": "main", "index": 0 }]]
+    },
+    "Ergebnisse aufbereiten": {
+      "main": [[{ "node": "Bericht-Generator (Claude)", "type": "main", "index": 0 }]]
+    },
+    "Bericht-Generator (Claude)": {
+      "main": [[{ "node": "Bericht ausgeben + speichern", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "local" },
+  "id": "zollern-cad-llm-workflow",
+  "tags": ["zollern", "scrum-40", "cad", "llm", "fe.screen-sim", "v2"]
+}

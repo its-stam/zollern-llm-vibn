@@ -1,0 +1,6 @@
+.DS_Store
+.env
+*.key
+.claude-flow/
+.swarm/
+node_modules/

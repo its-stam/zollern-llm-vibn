@@ -1,0 +1,1061 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "07d3f681-cf6d-4551-bfde-fafac0152436",
+      "name": "Start (Manuell)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        2256
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// PLATZHALTER: Echte CAD-Datei hier einlesen.\n// Ersatz: STEP-Datei via pythonOCC parsen oder AML-XML einlesen.\n\n// Fiktive Beispielanlage: Förderer / Drehtisch (SCRUM-41)\nconst assembly = {\n  anlage: \"Foerderer_Drehtisch_v1\",\n  format_quelle: \"STEP (ISO 10303-21) – fiktiv\",\n  komponenten: [\n    { id: \"K001\", name: \"Hauptrahmen\", typ: \"Tragstruktur\", material: \"Stahl\", bbox: { x: 2000, y: 800, z: 600 }, kinder: [\"K002\",\"K003\",\"K004\"] },\n    { id: \"K002\", name: \"Foerderband_Links\", typ: \"Foerdertechnik\", material: \"Gummi/Stahl\", bbox: { x: 1800, y: 200, z: 100 }, kinder: [] },\n    { id: \"K003\", name: \"Foerderband_Rechts\", typ: \"Foerdertechnik\", material: \"Gummi/Stahl\", bbox: { x: 1800, y: 200, z: 100 }, kinder: [] },\n    { id: \"K004\", name: \"Drehtisch_Zentrum\", typ: \"Drehtisch\", material: \"Stahl\", bbox: { x: 600, y: 600, z: 200 }, kinder: [\"K005\",\"K006\"] },\n    { id: \"K005\", name: \"Antriebsmotor_Drehtisch\", typ: \"Antrieb\", material: \"Metall\", bbox: { x: 200, y: 200, z: 300 }, kinder: [] },\n    { id: \"K006\", name: \"Sensor_Endlage\", typ: \"Sensor\", material: \"Kunststoff/Metall\", bbox: { x: 50, y: 50, z: 80 }, kinder: [] }\n  ],\n  sps_variablen_bekannt: true,\n  kinematik_vorhanden: false\n};\n\nreturn [{ json: { assembly, assembly_json: JSON.stringify(assembly, null, 2) } }];"
+      },
+      "id": "f5c0b1dc-7c01-4643-83fe-1810f5469a1c",
+      "name": "CAD-Daten vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        2256
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2048, system: 'Du bist Simulationsexperte für fe.screen-sim V5. Klassifizierst CAD-Komponenten nach Funktion. Sprache: Deutsch. Antwortest ausschließlich über das bereitgestellte Tool.', tools: [{ name: 'submit_klassifikation', description: 'Reicht Klassifikationen ein.', input_schema: { type: 'object', properties: { komponenten: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, funktionsklasse: { type: 'string', enum: ['Foerdertechnik','Antrieb','Sensor','Tragstruktur','Drehtisch','Sonstiges'] }, begruendung: { type: 'string' } }, required: ['id','name','funktionsklasse','begruendung'] } } }, required: ['komponenten'] } }], tool_choice: { type: 'tool', name: 'submit_klassifikation' }, messages: [{ role: 'user', content: 'Klassifiziere folgende CAD-Assemblierung:\\n' + $json.assembly_json }] }) }}",
+        "options": {}
+      },
+      "id": "c4d48967-b383-4cb2-a305-b435668f1bea",
+      "name": "Agent A: Komponenten-Klassifikation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1616,
+        2048
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NN4QmsGKBIU4cTMS",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tagged Wrapper: Tool-Use-Output extrahieren, Rolle setzen\nconst r = $json;\nlet payload;\ntry {\n  if (r.content) {\n    const tu = r.content.find(c => c.type === 'tool_use');\n    if (tu) payload = tu.input;\n    else if (r.content[0] && r.content[0].text) payload = { _raw_text: r.content[0].text };\n    else payload = { _error: 'Unbekanntes Response-Format', _raw: r };\n  } else {\n    payload = { _error: 'Keine content im Response', _raw: r };\n  }\n} catch (e) {\n  payload = { _error: e.message, _raw: r };\n}\nreturn [{ json: { rolle: 'klassifikation', payload, tokens_in: r.usage ? r.usage.input_tokens : null, tokens_out: r.usage ? r.usage.output_tokens : null } }];"
+      },
+      "id": "55c6f816-1ff7-4481-996d-c7fe8ae0b0ef",
+      "name": "Tag A",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        2048
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2048, system: 'Du bist Experte für fe.screen-sim V5 Importformate. Bewertest welche Container-Strukturen erzeugt werden sollen. SPS-Variablen-Definitionen und Anlagenverhalten sind NICHT dein Thema (übernimmt Agent C). Sprache: Deutsch. Antwortest ausschließlich über das bereitgestellte Tool.', tools: [{ name: 'submit_importformat', description: 'Reicht Importformat-Bewertung ein.', input_schema: { type: 'object', properties: { strukturen: { type: 'array', items: { type: 'object', properties: { name: { type: 'string', enum: ['Schaltschrank-Excel','PLCTAGS-Excel','Connectors-XML','AML'] }, machbarkeit: { type: 'string', enum: ['hoch','mittel','niedrig'] }, begruendung: { type: 'string' }, felder: { type: 'array', items: { type: 'string' } } }, required: ['name','machbarkeit','begruendung','felder'] } } }, required: ['strukturen'] } }], tool_choice: { type: 'tool', name: 'submit_importformat' }, messages: [{ role: 'user', content: 'Bewerte Import-Strukturen für folgende Assemblierung:\\n' + $json.assembly_json }] }) }}",
+        "options": {}
+      },
+      "id": "eee4d537-8fa8-480b-9a00-2638baa03e89",
+      "name": "Agent B: Importformat-Bewertung",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1616,
+        2256
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NN4QmsGKBIU4cTMS",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $json;\nlet payload;\ntry {\n  if (r.content) {\n    const tu = r.content.find(c => c.type === 'tool_use');\n    if (tu) payload = tu.input;\n    else if (r.content[0] && r.content[0].text) payload = { _raw_text: r.content[0].text };\n    else payload = { _error: 'Unbekanntes Response-Format', _raw: r };\n  } else {\n    payload = { _error: 'Keine content im Response', _raw: r };\n  }\n} catch (e) {\n  payload = { _error: e.message, _raw: r };\n}\nreturn [{ json: { rolle: 'importformat', payload, tokens_in: r.usage ? r.usage.input_tokens : null, tokens_out: r.usage ? r.usage.output_tokens : null } }];"
+      },
+      "id": "5dc910b5-b9a5-433a-988e-d1c24c5a8c43",
+      "name": "Tag B",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        2256
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2048, system: 'Du bist Simulationsarchitekt für fe.screen-sim V5. Definierst Anlagenverhalten: Bewegungen, Sensoren, SPS-Variablen, manuelle Schritte. Container-Format-Auswahl ist NICHT dein Thema (übernimmt Agent B). WICHTIG: SPS-Adressen sind aus CAD nicht ableitbar. Setze adresse: TBD_SPS_Quelle_erforderlich. Erfinde keine Adressen. Sprache: Deutsch. Antwortest ausschließlich über das bereitgestellte Tool.', tools: [{ name: 'submit_simulationslogik', description: 'Reicht Simulationslogik ein.', input_schema: { type: 'object', properties: { bewegungen: { type: 'array', items: { type: 'object', properties: { komponente_id: { type: 'string' }, art: { type: 'string' }, beschreibung: { type: 'string' } }, required: ['komponente_id','art','beschreibung'] } }, sensor_trigger: { type: 'array', items: { type: 'object', properties: { sensor_id: { type: 'string' }, ausloeser: { type: 'string' } }, required: ['sensor_id','ausloeser'] } }, sps_variablen: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, datentyp: { type: 'string' }, adresse: { type: 'string' } }, required: ['name','datentyp','adresse'] } }, manuelle_schritte: { type: 'array', items: { type: 'string' } } }, required: ['bewegungen','sensor_trigger','sps_variablen','manuelle_schritte'] } }], tool_choice: { type: 'tool', name: 'submit_simulationslogik' }, messages: [{ role: 'user', content: 'Definiere Simulationslogik für folgende Assemblierung:\\n' + $json.assembly_json }] }) }}",
+        "options": {}
+      },
+      "id": "7dd0db23-ec4c-4cd7-a6d5-ef7c0ec377a7",
+      "name": "Agent C: Simulationslogik",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1616,
+        2448
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NN4QmsGKBIU4cTMS",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $json;\nlet payload;\ntry {\n  if (r.content) {\n    const tu = r.content.find(c => c.type === 'tool_use');\n    if (tu) payload = tu.input;\n    else if (r.content[0] && r.content[0].text) payload = { _raw_text: r.content[0].text };\n    else payload = { _error: 'Unbekanntes Response-Format', _raw: r };\n  } else {\n    payload = { _error: 'Keine content im Response', _raw: r };\n  }\n} catch (e) {\n  payload = { _error: e.message, _raw: r };\n}\nreturn [{ json: { rolle: 'simulationslogik', payload, tokens_in: r.usage ? r.usage.input_tokens : null, tokens_out: r.usage ? r.usage.output_tokens : null } }];"
+      },
+      "id": "52e6b365-ce3d-4ffd-8471-6733955ba34d",
+      "name": "Tag C",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "29351ece-5105-44bd-a35b-e4d790b5136c",
+      "name": "Merge Agenten",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2048,
+        2256
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Per Tag mappen statt per Position. Robust gegen Reihenfolge.\nconst items = $input.all().map(i => i.json);\nconst byRolle = (r) => items.find(i => i.rolle === r) || { payload: { _error: 'Rolle ' + r + ' fehlt' }, tokens_in: 0, tokens_out: 0 };\n\nconst k = byRolle('klassifikation');\nconst f = byRolle('importformat');\nconst s = byRolle('simulationslogik');\n\nconst tokens_total = items.reduce((sum, i) => sum + (i.tokens_in || 0) + (i.tokens_out || 0), 0);\n\nreturn [{\n  json: {\n    klassifikation_json: JSON.stringify(k.payload, null, 2),\n    importformat_json: JSON.stringify(f.payload, null, 2),\n    simulationslogik_json: JSON.stringify(s.payload, null, 2),\n    klassifikation_obj: k.payload,\n    importformat_obj: f.payload,\n    simulationslogik_obj: s.payload,\n    tokens_agenten: tokens_total,\n    anlage: 'Foerderer_Drehtisch_v1',\n    datum: new Date().toISOString().split('T')[0]\n  }\n}];"
+      },
+      "id": "e8ed2121-5e99-42b0-902d-09b5ae24fca4",
+      "name": "Ergebnisse aufbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2256,
+        2256
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 4096, system: 'Du bist technischer Redakteur für Machbarkeitsstudien (HS Albstadt-Sigmaringen, Projekt Zollern). Erstellst strukturierten Markdown-Bericht in präziser Fachsprache. Keine em dashes, keine passive Sprache, keine Filler. Sprache: Deutsch.', messages: [{ role: 'user', content: 'Erstelle Machbarkeitsbericht für Anlage \"' + $json.anlage + '\" (Datum: ' + $json.datum + ').\\n\\nDie drei Analysen liegen als JSON vor:\\n\\n## Analyse 1 – Komponenten-Klassifikation\\n```json\\n' + $json.klassifikation_json + '\\n```\\n\\n## Analyse 2 – Importformat-Bewertung\\n```json\\n' + $json.importformat_json + '\\n```\\n\\n## Analyse 3 – Simulationslogik\\n```json\\n' + $json.simulationslogik_json + '\\n```\\n\\nStruktur:\\n1. Executive Summary (3 Sätze)\\n2. Komponentenübersicht (Tabelle)\\n3. Empfehlung Importformat für fe.screen-sim V5\\n4. Simulationsstruktur-Vorschlag (Bewegungen, Sensoren, SPS)\\n5. Limitationen und offene Punkte\\n6. Nächste Schritte\\n\\nMarkdown-Format. Tabellen wo passend. Halluzinationen vermeiden: wenn Daten fehlen, vermerken statt erfinden.' }] }) }}",
+        "options": {}
+      },
+      "id": "7d358642-d54e-41ec-8f1e-da39fb7d5898",
+      "name": "Bericht-Generator (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2480,
+        2256
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NN4QmsGKBIU4cTMS",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Bericht extrahieren, Markdown + Sidecar-Meta auf Disk persistieren\nconst fs = require('fs');\nconst path = require('path');\n\nconst response = $json;\nlet bericht = '';\nlet usage = {};\ntry {\n  bericht = response.content[0].text;\n  usage = response.usage || {};\n} catch (e) {\n  bericht = '[FEHLER beim Bericht-Extrakt: ' + e.message + ']\\n\\nRoh-Response:\\n' + JSON.stringify(response, null, 2);\n}\n\nconst now = new Date();\nconst ts = now.toISOString().replace(/[:.]/g, '-').replace(/T/, '_').slice(0, 19);\nconst dir = '/Users/stm/Desktop/UNI/Master/1. Semester/Project Data Eng ZOLLERN/SCRUM-40/runs';\nfs.mkdirSync(dir, { recursive: true });\n\nconst mdPath = path.join(dir, ts + '.md');\nconst metaPath = path.join(dir, ts + '.meta.json');\n\nfs.writeFileSync(mdPath, bericht);\n\nconst meta = {\n  timestamp: now.toISOString(),\n  modell: 'claude-sonnet-4-6',\n  anlage: 'Foerderer_Drehtisch_v1',\n  tokens_summary: { input: usage.input_tokens || 0, output: usage.output_tokens || 0 },\n  pfad_bericht: mdPath\n};\nfs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));\n\nconsole.log('=== ZOLLERN BERICHT ===');\nconsole.log('Geschrieben: ' + mdPath);\nconsole.log(bericht);\n\nreturn [{ json: { bericht, status: 'persisted', pfad: mdPath, meta_pfad: metaPath, ...meta } }];"
+      },
+      "id": "f2017cf2-67fc-40e9-a38c-1989615ace3e",
+      "name": "Bericht ausgeben + speichern",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        2256
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Phase 1 (Analyse)",
+        "height": 800,
+        "width": 1760,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        1952
+      ],
+      "id": "f805ab23-e65f-4b59-9962-49cf9266eeed",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 4096, system: 'Du bist Simulations-Architekt fuer fe.screen-sim V5. Du erhaeltst eine CAD-Assembly mit Inventor User Defined Properties. Erstelle einen vollstaendigen Ausfuehrungsplan: welche Objekte umbenannt, getypt, mit MotionJoint versehen werden muessen. Surfaces brauchen spaeter Buttons+Logic. Verwende NUR das tool create_execution_plan.', tools: [{ name: 'create_execution_plan', description: 'Erstellt strukturierten Ausfuehrungsplan fuer Multi-Agent-Pipeline', input_schema: { type: 'object', properties: { to_rename: { type: 'array', items: { type: 'object', properties: { object_id: { type: 'string' }, ursprungsname: { type: 'string' }, neuer_name: { type: 'string' } }, required: ['object_id','neuer_name'] } }, to_type: { type: 'array', items: { type: 'object', properties: { object_id: { type: 'string' }, neuer_typ: { type: 'string', enum: ['Surface','Sensor','Motorisiert'] }, sensor_detect_payload: { type: 'boolean' }, motorisiert_joint_scale: { type: 'array', items: { type: 'number' } } }, required: ['object_id','neuer_typ'] } }, to_joint: { type: 'array', items: { type: 'object', properties: { object_id: { type: 'string' }, joint_type: { type: 'string' }, motion_source: { type: 'string', enum: ['Motorisiert'] } }, required: ['object_id','joint_type'] } }, surfaces_for_logic: { type: 'array', items: { type: 'object', properties: { surface_id: { type: 'string' }, surface_name: { type: 'string' }, position: { type: 'object' } }, required: ['surface_id','surface_name'] } }, ohne_tags_skipped: { type: 'array', items: { type: 'string' } } }, required: ['to_rename','to_type','to_joint','surfaces_for_logic'] } }], tool_choice: { type: 'tool', name: 'create_execution_plan' }, messages: [{ role: 'user', content: 'Assembly:\\n' + $json.assembly_json + '\\n\\nStats: ' + JSON.stringify($json.stats) + '\\n\\nRegeln (aus F.EE Demo):\\n1. Tag Objektname -> umbenennen, sonst skip\\n2. Tag Simulationstyp -> Typ setzen. Wenn Sensor: detect_payload=true. Wenn Motorisiert: joint_scale=[0.5,0.5,0.5]\\n3. Tag JointType -> MotionJoint konfigurieren, motion_source=Motorisiert\\n4. Surfaces sammeln fuer Phase Logic-Builder' }] }) }}",
+        "options": {}
+      },
+      "id": "63645b73-48e0-4dde-8564-e518521f1020",
+      "name": "Agent 1: Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1408,
+        3072
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NN4QmsGKBIU4cTMS",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Plan aus tool_use Block extrahieren\nconst response = $json;\nlet plan = null;\nlet tokens = { in: 0, out: 0 };\ntry {\n  const block = response.content.find(c => c.type === 'tool_use');\n  plan = block ? block.input : null;\n  tokens.in = response.usage?.input_tokens || 0;\n  tokens.out = response.usage?.output_tokens || 0;\n} catch (e) {\n  return [{ json: { error: 'Plan-Extraktion fehlgeschlagen: ' + e.message, raw: response } }];\n}\nif (!plan) return [{ json: { error: 'Kein tool_use Block', raw: response } }];\n\nreturn [{\n  json: {\n    plan,\n    plan_json: JSON.stringify(plan, null, 2),\n    tokens_plan: tokens,\n    rolle: 'plan'\n  }\n}];"
+      },
+      "id": "dc99886d-518a-4b1e-92a7-771d251818b5",
+      "name": "Plan extrahieren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1632,
+        3072
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// FIX Bug 2: Plan mit Rolle 'plan' in Merge einspeisen\n// Damit Logic Builder + Sammle alle Calls den Plan via Aggregate finden\nreturn [{\n  json: {\n    rolle: 'plan',\n    plan: $json.plan,\n    plan_json: $json.plan_json,\n    tokens_plan: $json.tokens_plan\n  }\n}];"
+      },
+      "id": "717edb52-7b85-429c-a68a-6f9856c349b0",
+      "name": "Tag Plan",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        3472
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 4096, system: 'Du bist Renamer-Agent fuer fe.screen-sim. Du erhaeltst eine to_rename Liste. Erzeuge fuer jeden Eintrag einen rename_object Tool-Call. Verwende NUR das tool batch_rename.', tools: [{ name: 'batch_rename', description: 'Batch-Rename aller Objekte in der to_rename Liste', input_schema: { type: 'object', properties: { calls: { type: 'array', items: { type: 'object', properties: { tool: { type: 'string', enum: ['rename_object'] }, object_id: { type: 'string' }, new_name: { type: 'string' }, source_tag: { type: 'string' } }, required: ['tool','object_id','new_name'] } } }, required: ['calls'] } }], tool_choice: { type: 'tool', name: 'batch_rename' }, messages: [{ role: 'user', content: 'to_rename:\\n' + JSON.stringify($json.plan.to_rename, null, 2) + '\\n\\nGib genau einen rename_object call pro Eintrag. source_tag = \"Inventor User Defined Properties/Objektname\"' }] }) }}",
+        "options": {}
+      },
+      "id": "b8d5bb1f-8633-49a8-8770-d7628e9c6a49",
+      "name": "Agent 2: Renamer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        2864
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NN4QmsGKBIU4cTMS",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 4096, system: 'Du bist Typer-Agent fuer fe.screen-sim. Setze Objekt-Typen + Sondereigenschaften. Surface=einfach. Sensor=plus DetectPayload=true. Motorisiert=plus JointScale=[0.5,0.5,0.5]. Verwende NUR das tool batch_set_type.', tools: [{ name: 'batch_set_type', description: 'Batch-set_object_type plus optionale property-set Calls', input_schema: { type: 'object', properties: { calls: { type: 'array', items: { type: 'object', properties: { tool: { type: 'string', enum: ['set_object_type','set_property'] }, object_id: { type: 'string' }, value: {} }, required: ['tool','object_id','value'] } } }, required: ['calls'] } }], tool_choice: { type: 'tool', name: 'batch_set_type' }, messages: [{ role: 'user', content: 'to_type:\\n' + JSON.stringify($json.plan.to_type, null, 2) + '\\n\\nFuer jeden Eintrag: 1 set_object_type Call. Wenn Sensor: 1 zusaetzlicher set_property Call mit value={ property: \"DetectPayload\", val: true }. Wenn Motorisiert: 1 zusaetzlicher set_property Call mit value={ property: \"JointScale\", val: [0.5,0.5,0.5] }.' }] }) }}",
+        "options": {}
+      },
+      "id": "954f06a0-8f42-4a7f-8bec-d9d47890160e",
+      "name": "Agent 3: Typer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        3072
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NN4QmsGKBIU4cTMS",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2048, system: 'Du bist Joint-Configurer fuer fe.screen-sim. Konfiguriere MotionJoints. Verwende NUR das tool batch_configure_joint.', tools: [{ name: 'batch_configure_joint', description: 'Batch configure_motionjoint Calls', input_schema: { type: 'object', properties: { calls: { type: 'array', items: { type: 'object', properties: { tool: { type: 'string', enum: ['configure_motionjoint'] }, object_id: { type: 'string' }, joint_type: { type: 'string' }, motion_source: { type: 'string' } }, required: ['tool','object_id','joint_type','motion_source'] } } }, required: ['calls'] } }], tool_choice: { type: 'tool', name: 'batch_configure_joint' }, messages: [{ role: 'user', content: 'to_joint:\\n' + JSON.stringify($json.plan.to_joint, null, 2) + '\\n\\nFuer jeden Eintrag: 1 configure_motionjoint Call mit motion_source=\"Motorisiert\".' }] }) }}",
+        "options": {}
+      },
+      "id": "97b28d7d-a87c-4afe-82d8-2168dde1bda6",
+      "name": "Agent 4: Joint Configurer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1840,
+        3264
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NN4QmsGKBIU4cTMS",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// FIX Bug 1: hardcoded rolle 'renamer' statt $node.name.replace()\nconst response = $json;\nconst rolle = 'renamer';\nlet calls = [];\nlet tokens = { in: 0, out: 0 };\nlet error = null;\ntry {\n  const block = response.content.find(c => c.type === 'tool_use');\n  if (block && block.input && Array.isArray(block.input.calls)) {\n    calls = block.input.calls;\n  } else {\n    error = 'Kein tool_use mit calls-Array';\n  }\n  tokens.in = response.usage?.input_tokens || 0;\n  tokens.out = response.usage?.output_tokens || 0;\n} catch (e) { error = e.message; }\nreturn [{ json: { rolle, calls, tokens, error, calls_count: calls.length } }];"
+      },
+      "id": "f768b57b-01ea-4711-88e2-d0590be75d2e",
+      "name": "Tag Renamer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        2864
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $json;\nlet calls = [];\nlet tokens = { in: 0, out: 0 };\nlet error = null;\ntry {\n  const block = response.content.find(c => c.type === 'tool_use');\n  if (block && block.input && Array.isArray(block.input.calls)) calls = block.input.calls;\n  else error = 'Kein tool_use mit calls-Array';\n  tokens.in = response.usage?.input_tokens || 0;\n  tokens.out = response.usage?.output_tokens || 0;\n} catch (e) { error = e.message; }\nreturn [{ json: { rolle: 'typer', calls, tokens, error, calls_count: calls.length } }];"
+      },
+      "id": "a7d53aa5-5e7e-4bb7-afc7-1ff983e24260",
+      "name": "Tag Typer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        3072
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $json;\nlet calls = [];\nlet tokens = { in: 0, out: 0 };\nlet error = null;\ntry {\n  const block = response.content.find(c => c.type === 'tool_use');\n  if (block && block.input && Array.isArray(block.input.calls)) calls = block.input.calls;\n  else error = 'Kein tool_use mit calls-Array';\n  tokens.in = response.usage?.input_tokens || 0;\n  tokens.out = response.usage?.output_tokens || 0;\n} catch (e) { error = e.message; }\nreturn [{ json: { rolle: 'joint', calls, tokens, error, calls_count: calls.length } }];"
+      },
+      "id": "316a1825-94c5-4790-a32c-2e529cd73923",
+      "name": "Tag Joint",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        3264
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "id": "ee1ae719-580b-41e7-b6a7-fe0a3b72980a",
+      "name": "Merge Transform",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2288,
+        3072
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "id": "0875cee3-a3b6-4c91-9d7a-3e5ffc5c59db",
+      "name": "Aggregate Transform",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2480,
+        3072
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 4096, system: 'Du bist Logic-Builder fuer fe.screen-sim. Pro Surface erstellst du: 2 Buttons (Forward/Reverse, scale 0.5x0.5x0.5, Y-Offset +0.5m, velocity +/-1.0 m/s), 1 LogicObject mit OR-Logik, 3 Verknuepfungen Button->Logic->Surface (VelocityX/Y/Z). Quelle: F.EE Demo Regelwerk. Verwende NUR das tool batch_logic_build.', tools: [{ name: 'batch_logic_build', description: 'Erstellt Buttons + LogicObjects + Verknuepfungen pro Surface', input_schema: { type: 'object', properties: { calls: { type: 'array', items: { type: 'object', properties: { tool: { type: 'string', enum: ['create_button','create_logic_object','link_objects'] }, params: { type: 'object' } }, required: ['tool','params'] } } }, required: ['calls'] } }], tool_choice: { type: 'tool', name: 'batch_logic_build' }, messages: [{ role: 'user', content: 'Plan (surfaces_for_logic):\\n' + (() => { const data = ($json.data || []); const planItem = data.find(d => d.rolle === 'plan'); return planItem ? JSON.stringify(planItem.plan?.surfaces_for_logic || [], null, 2) : 'KEIN PLAN – Bug: Plan nicht in Aggregate'; })() + '\\n\\nFuer jede Surface erzeuge in dieser Reihenfolge:\\n1. create_button (Forward): { name: <surface_name>+\"_Forward\", parent: <surface_id>, scale: [0.5,0.5,0.5], offset_y: 0.5, on_press_velocity: [1.0,0,0] }\\n2. create_button (Reverse): { name: <surface_name>+\"_Reverse\", parent: <surface_id>, scale: [0.5,0.5,0.5], offset_y: 0.5, on_press_velocity: [-1.0,0,0] }\\n3. create_logic_object: { name: <surface_name>+\"_Controller\", logic_type: \"OR_Velocity\", inputs: [<surface_name>+\"_Forward\", <surface_name>+\"_Reverse\"], output_target: <surface_id> }\\n4. link_objects: { from: <surface_name>+\"_Forward\", from_port: \"Pressed\", to: <surface_name>+\"_Controller\", to_port: \"ButtonForward\" }\\n5. link_objects: { from: <surface_name>+\"_Reverse\", from_port: \"Pressed\", to: <surface_name>+\"_Controller\", to_port: \"ButtonReverse\" }\\n6. link_objects: { from: <surface_name>+\"_Controller\", from_port: \"VelocityX\", to: <surface_id>, to_port: \"InVelocityX\" }' }] }) }}",
+        "options": {}
+      },
+      "id": "ac85c044-e3f3-4450-93b1-37e51b9f8a8f",
+      "name": "Agent 5: Logic Builder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2688,
+        3072
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NN4QmsGKBIU4cTMS",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Logic-Builder Tool-Use extrahieren + alle Calls aus Aggregate ziehen\nconst response = $json;\nlet logic_calls = [];\nlet tokens = { in: 0, out: 0 };\nlet error = null;\ntry {\n  const block = response.content.find(c => c.type === 'tool_use');\n  if (block && block.input && Array.isArray(block.input.calls)) logic_calls = block.input.calls;\n  else error = 'Logic Builder: kein tool_use';\n  tokens.in = response.usage?.input_tokens || 0;\n  tokens.out = response.usage?.output_tokens || 0;\n} catch (e) { error = e.message; }\n\n// Alle Calls aus Aggregate holen (inkl. Plan jetzt via Tag Plan)\nconst prev = $('Aggregate Transform').first().json.data || [];\nconst rename_calls = (prev.find(d => d.rolle === 'renamer') || {}).calls || [];\nconst type_calls   = (prev.find(d => d.rolle === 'typer')   || {}).calls || [];\nconst joint_calls  = (prev.find(d => d.rolle === 'joint')   || {}).calls || [];\nconst plan_item    = prev.find(d => d.rolle === 'plan') || {};\n\nreturn [{\n  json: {\n    plan: plan_item.plan || null,\n    all_calls: {\n      rename: rename_calls,\n      type: type_calls,\n      joint: joint_calls,\n      logic: logic_calls\n    },\n    counts: {\n      rename: rename_calls.length,\n      type: type_calls.length,\n      joint: joint_calls.length,\n      logic: logic_calls.length,\n      total: rename_calls.length + type_calls.length + joint_calls.length + logic_calls.length\n    },\n    tokens_logic: tokens,\n    error_logic: error\n  }\n}];"
+      },
+      "id": "a910cd8a-dbdf-4688-ab23-5a9f8561dd67",
+      "name": "Sammle alle Calls",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        3072
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// MCP Executor (Platzhalter)\n// TODO bei MCP-Anbindung von Gruppe B (MCP) (Grp B):\n//   - HTTP POST an MCP-Endpoint pro Call\n//   - Sequence: rename -> type -> joint -> logic (MUSS in dieser Reihenfolge)\n//   - Bei create_button/create_logic_object: Response-ID fuer link_objects merken\n//   - Fehlerbehandlung + Rollback pro Call\n\nconst data = $json;\nconst all_calls = data.all_calls || {};\n\nconst execution_log = [];\nconst sequence = ['rename', 'type', 'joint', 'logic'];\nfor (const phase of sequence) {\n  const calls = all_calls[phase] || [];\n  for (const call of calls) {\n    execution_log.push({\n      phase,\n      tool: call.tool || phase,\n      params: call,\n      status: 'simulated_ok',\n      timestamp: new Date().toISOString()\n    });\n  }\n}\n\nreturn [{\n  json: {\n    plan: data.plan,\n    all_calls,\n    counts: data.counts,\n    tokens_logic: data.tokens_logic,\n    execution_log,\n    execution_summary: {\n      total: execution_log.length,\n      simulated: execution_log.length,\n      failed: 0,\n      mcp_endpoint: 'PLACEHOLDER – wird durch fe.screen-sim MCP-URL ersetzt sobald Gruppe B (MCP) (Grp B) Endpoint liefert'\n    }\n  }\n}];"
+      },
+      "id": "09f1bd34-1038-4869-945e-ab0ef930f5e2",
+      "name": "MCP Executor (Platzhalter)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        3072
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 4096, system: 'Du bist Validator fuer eine Multi-Agent fe.screen-sim Pipeline. Du erhaeltst den Plan und die ausgefuehrten Tool-Calls (simuliert). Pruefe: 1) Vollstaendigkeit (jedes Plan-Item hat passenden Call), 2) Reihenfolge (rename vor type vor joint vor logic), 3) Surface-Logic vollstaendig (pro Surface 2 Buttons + 1 LogicObject + 6 Links), 4) Sensor/Motorisiert Sondereigenschaften. Schreibe Markdown-Bericht auf Deutsch mit Abschnitten: Zusammenfassung, Statistik, Validierung, Limitationen, Naechste Schritte zur MCP-Anbindung.', messages: [{ role: 'user', content: 'Plan:\\n' + JSON.stringify($json.plan, null, 2) + '\\n\\nCounts: ' + JSON.stringify($json.counts) + '\\n\\nExecution Summary: ' + JSON.stringify($json.execution_summary) + '\\n\\nAlle Calls:\\n' + JSON.stringify($json.all_calls, null, 2) }] }) }}",
+        "options": {}
+      },
+      "id": "7d597bf5-5cd0-474f-9787-f2bf1e3f2442",
+      "name": "Agent 6: Validator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3344,
+        3216
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "NN4QmsGKBIU4cTMS",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// CAD-Daten mit Inventor User Defined Properties Tags\n// Ersatz spaeter: STEP-Parser-Output von SCRUM-29 (Gruppe A (CAD))\n// Real waere: import_cad_file(stationFilePath) -> get_all_objects()\n// ============================================================\n\nconst assembly = {\n  anlage: \"2-Foerderer_1-Drehtisch\",\n  format_quelle: \"STEP (ISO 10303-21)\",\n  stationFilePath: \"C:\\\\CAD\\\\Conveyor_System\\\\2-Foerderer_1-Drehtisch.stp\",\n  objekte: [\n    { id: \"obj_001\", ursprungsname: \"C26312.00-1_Adapter:1\", inventor_tags: { Objektname: null, Simulationstyp: null, JointType: null }, typ_hint: \"Adapter\" },\n    { id: \"obj_010\", ursprungsname: \"Foerderband_RB01:1\", inventor_tags: { Objektname: \"RB01\", Simulationstyp: \"Surface\", JointType: null }, position: { x: 0, y: 0, z: 1 } },\n    { id: \"obj_011\", ursprungsname: \"Foerderband_RB02:1\", inventor_tags: { Objektname: \"RB02\", Simulationstyp: \"Surface\", JointType: null }, position: { x: 2, y: 0, z: 1 } },\n    { id: \"obj_012\", ursprungsname: \"Foerderband_RB03:1\", inventor_tags: { Objektname: \"RB03\", Simulationstyp: \"Surface\", JointType: null }, position: { x: 4, y: 0, z: 1 } },\n    { id: \"obj_020\", ursprungsname: \"Drehtisch_1315035-1:1\", inventor_tags: { Objektname: \"DT01\", Simulationstyp: \"Motorisiert\", JointType: \"RevoluteJoint\" }, position: { x: 3, y: 0, z: 1 } },\n    { id: \"obj_030\", ursprungsname: \"1791275-1_Naeherungsschalter:1\", inventor_tags: { Objektname: \"Sensor_NSE1\", Simulationstyp: \"Sensor\", JointType: null }, position: { x: 0.5, y: 0.2, z: 1.2 } },\n    { id: \"obj_031\", ursprungsname: \"1791275-1_Naeherungsschalter:2\", inventor_tags: { Objektname: \"Sensor_NSE2\", Simulationstyp: \"Sensor\", JointType: null }, position: { x: 1.8, y: 0.2, z: 1.2 } },\n    { id: \"obj_032\", ursprungsname: \"C77102.00-1_Sensorhalter:1\", inventor_tags: { Objektname: null, Simulationstyp: null, JointType: null } },\n    { id: \"obj_040\", ursprungsname: \"C81289.00-1_Staender:1\", inventor_tags: { Objektname: null, Simulationstyp: null, JointType: null } }\n  ]\n};\n\nconst surfaces = assembly.objekte.filter(o => o.inventor_tags.Simulationstyp === \"Surface\");\nconst motorisiert = assembly.objekte.filter(o => o.inventor_tags.Simulationstyp === \"Motorisiert\");\nconst sensoren = assembly.objekte.filter(o => o.inventor_tags.Simulationstyp === \"Sensor\");\n\nreturn [{\n  json: {\n    assembly,\n    assembly_json: JSON.stringify(assembly, null, 2),\n    stats: {\n      objekte_total: assembly.objekte.length,\n      surfaces: surfaces.length,\n      motorisiert: motorisiert.length,\n      sensoren: sensoren.length,\n      ohne_tags: assembly.objekte.filter(o => !o.inventor_tags.Objektname).length\n    },\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "7becd582-bc96-4776-a9e6-558b4ad21629",
+      "name": "CAD-Daten vorbereiten1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        3072
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Bericht extrahieren + persist (3 Dateien: md + calls.json + meta.json)\nconst response = $json;\nlet bericht = '';\nlet tokens = { in: 0, out: 0 };\ntry {\n  const block = response.content.find(c => c.type === 'text');\n  bericht = block ? block.text : JSON.stringify(response);\n  tokens.in = response.usage?.input_tokens || 0;\n  tokens.out = response.usage?.output_tokens || 0;\n} catch (e) { bericht = 'Validator-Fehler: ' + e.message; }\n\nconst ctx = $('MCP Executor (Platzhalter)').first().json;\nconst ts = new Date().toISOString().replace(/[:.]/g,'-').replace(/T/,'_').slice(0,19);\nconst basepath = '/Users/stm/Desktop/UNI/Master/1. Semester/Project Data Eng ZOLLERN/SCRUM-40/runs_phase2';\n\nconst fs = require('fs');\nconst path = require('path');\nlet write_status = 'ok';\ntry {\n  fs.mkdirSync(basepath, { recursive: true });\n  fs.writeFileSync(path.join(basepath, ts + '.md'), bericht);\n  fs.writeFileSync(path.join(basepath, ts + '.calls.json'), JSON.stringify(ctx.all_calls, null, 2));\n  fs.writeFileSync(path.join(basepath, ts + '.meta.json'), JSON.stringify({\n    timestamp: new Date().toISOString(),\n    workflow_version: 'phase2_v2',\n    counts: ctx.counts,\n    execution_summary: ctx.execution_summary,\n    tokens_validator: tokens,\n    plan_surfaces: (ctx.plan?.surfaces_for_logic || []).length\n  }, null, 2));\n} catch (e) { write_status = 'failed: ' + e.message; }\n\nconsole.log('=== ZOLLERN Phase 2 Bericht ===');\nconsole.log('Persistiert: ' + basepath + '/' + ts + '.{md,calls.json,meta.json}');\nconsole.log(bericht);\n\nreturn [{ json: { bericht, tokens_validator: tokens, write_status, persist_dir: basepath, timestamp: ts, status: 'fertig' } }];"
+      },
+      "id": "4c755a58-fd74-456a-9b8d-b858ce1bfed6",
+      "name": "Bericht ausgeben + speichern1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3568,
+        3216
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Phase 2 (Transform)",
+        "height": 832,
+        "width": 2608,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        2784
+      ],
+      "id": "78519364-d637-4e7d-b759-6b6b4efa779b",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Selbe isoliert mit verschiedene API testen ob ergebnis gleich ist, gpt, gemeni, berichte vergleichen.\n\nEr braucht einen leistungstarken rechner.\n\nHerr Baumann, mit VPN hochleistungsrechner, ",
+        "height": 176,
+        "width": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        720,
+        2512
+      ],
+      "id": "a9f09de0-c7e3-411b-b7d8-7f320127548a",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start (Manuell)": {
+      "main": [
+        [
+          {
+            "node": "CAD-Daten vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CAD-Daten vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Agent A: Komponenten-Klassifikation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Agent B: Importformat-Bewertung",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Agent C: Simulationslogik",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent A: Komponenten-Klassifikation": {
+      "main": [
+        [
+          {
+            "node": "Tag A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent B: Importformat-Bewertung": {
+      "main": [
+        [
+          {
+            "node": "Tag B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent C: Simulationslogik": {
+      "main": [
+        [
+          {
+            "node": "Tag C",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag A": {
+      "main": [
+        [
+          {
+            "node": "Merge Agenten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag B": {
+      "main": [
+        [
+          {
+            "node": "Merge Agenten",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Tag C": {
+      "main": [
+        [
+          {
+            "node": "Merge Agenten",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge Agenten": {
+      "main": [
+        [
+          {
+            "node": "Ergebnisse aufbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnisse aufbereiten": {
+      "main": [
+        [
+          {
+            "node": "Bericht-Generator (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bericht-Generator (Claude)": {
+      "main": [
+        [
+          {
+            "node": "Bericht ausgeben + speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 1: Plan": {
+      "main": [
+        [
+          {
+            "node": "Plan extrahieren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan extrahieren": {
+      "main": [
+        [
+          {
+            "node": "Agent 2: Renamer",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Agent 3: Typer",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Agent 4: Joint Configurer",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tag Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 2: Renamer": {
+      "main": [
+        [
+          {
+            "node": "Tag Renamer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 3: Typer": {
+      "main": [
+        [
+          {
+            "node": "Tag Typer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 4: Joint Configurer": {
+      "main": [
+        [
+          {
+            "node": "Tag Joint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag Renamer": {
+      "main": [
+        [
+          {
+            "node": "Merge Transform",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag Typer": {
+      "main": [
+        [
+          {
+            "node": "Merge Transform",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Tag Joint": {
+      "main": [
+        [
+          {
+            "node": "Merge Transform",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Tag Plan": {
+      "main": [
+        [
+          {
+            "node": "Merge Transform",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge Transform": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Transform",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Transform": {
+      "main": [
+        [
+          {
+            "node": "Agent 5: Logic Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 5: Logic Builder": {
+      "main": [
+        [
+          {
+            "node": "Sammle alle Calls",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sammle alle Calls": {
+      "main": [
+        [
+          {
+            "node": "MCP Executor (Platzhalter)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Executor (Platzhalter)": {
+      "main": [
+        [
+          {
+            "node": "Agent 6: Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 6: Validator": {
+      "main": [
+        [
+          {
+            "node": "Bericht ausgeben + speichern1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CAD-Daten vorbereiten1": {
+      "main": [
+        [
+          {
+            "node": "Agent 1: Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "905b977e-84e7-4111-91ff-64657ec4572a",
+  "meta": {
+    "instanceId": "7eabe7066065a9a2f7474da57a51f64e22c0a18329def4738d9e693895df45f5"
+  },
+  "id": "rAYoIz0Wo91foR8L",
+  "tags": [
+    {
+      "name": "Anthropic API",
+      "id": "mUHdbtNKmbFMTLmj",
+      "updatedAt": "2026-05-17T14:17:00.679Z",
+      "createdAt": "2026-05-17T14:17:00.679Z"
+    }
+  ]
+}
