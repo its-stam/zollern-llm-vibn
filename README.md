@@ -6,6 +6,12 @@ structured feasibility report for an industrial simulation environment
 (fe.screen-sim V5). Built for ZOLLERN GmbH & Co. KG as a university feasibility study
 (HS Albstadt-Sigmaringen, Master DEC), spring 2026.
 
+![Phase 1: parallel LLM agents classify, describe and assess the assembly](docs/screenshots/phase1-analyse.png)
+
+![Phase 2: plan, rename, type, joint and logic agents fan out and merge into MCP tool calls; the executor is a documented placeholder](docs/screenshots/phase2-transform.png)
+
+*Both rendered from the n8n exports in `sprints/sprint-1/SCRUM-40/`, positions and connections as in the files.*
+
 ## What it does
 
 | Phase | Input | Agents | Output |
