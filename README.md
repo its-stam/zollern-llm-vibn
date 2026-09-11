@@ -1,10 +1,10 @@
-# LLM Agents for Virtual Commissioning
+# LLM Agents for Virtual Commissioning — ZOLLERN
 
 A two-phase agentic workflow that reads a CAD assembly description, classifies every
 component through parallel LLM agents with enforced tool schemas, and emits a
 structured feasibility report for an industrial simulation environment
-(fe.screen-sim V5). Built as a university feasibility study with an industrial
-partner, spring 2026.
+(fe.screen-sim V5). Built for ZOLLERN GmbH & Co. KG as a university feasibility study
+(HS Albstadt-Sigmaringen, Master DEC), spring 2026.
 
 ## What it does
 
@@ -48,6 +48,8 @@ phases.
   phase 2 is structurally complete but waits on a live simulation endpoint.
 - **No customer data.** Every run uses a synthetic test plant
   (`Foerderer_Drehtisch_v1`). No CAD files, no PLC addresses, no pricing.
+- **Client project.** ZOLLERN GmbH & Co. KG was the industrial partner; the study
+  was carried out as coursework at HS Albstadt-Sigmaringen.
 - **Team project.** This repo holds the workflow track (SCRUM-40 and the analysis
   tickets feeding it), written by Rustam Kohen. Other tracks (CAD parsing, the
   simulation-side MCP endpoint, testing) belong to other team members and are
