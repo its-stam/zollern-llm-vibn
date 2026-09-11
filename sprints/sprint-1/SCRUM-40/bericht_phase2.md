@@ -90,8 +90,8 @@ Geplant, aber nicht ausführbar ohne echten MCP-Endpunkt:
 
 | Nr. | Abhängigkeit | Verantwortlich | Impact |
 |---|---|---|---|
-| 1 | MCP-Endpunkt zu fe.screen-sim | Grp B (Gruppe B (MCP)) | Type + Joint + Live-Execution |
-| 2 | Echter STEP-Output von Zollern | Grp A (Gruppe A (CAD)) | Reale Anlage statt Dummy-Daten |
+| 1 | MCP-Endpunkt zu fe.screen-sim | Grp B (MCP) | Type + Joint + Live-Execution |
+| 2 | Echter STEP-Output von Zollern | Grp A (CAD-Parsing) | Reale Anlage statt Dummy-Daten |
 | 3 | SPS-Adressierung | Product Owner (Kundenseite) / Zollern | SPS-Variable Mapping |
 
 ---

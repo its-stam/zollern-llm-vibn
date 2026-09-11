@@ -6,7 +6,7 @@
 
 > Festlegung der unterstützten Eingabeformate sowie notwendiger Transformations- und Preprocessing-Pipelines zur Vorbereitung der CAD-Daten für ein LLM.
 
-Übernommen von Gruppe B (LLM-Stack) (Gruppe B, LLM) am 27.04.2026.
+Übernommen von Gruppe B (LLM-Stack) am 27.04.2026.
 
 ## 2. Quellen
 
@@ -186,7 +186,7 @@ Dieses Schema ist ein Vorschlag und nicht verbindlich. Festlegung gehört in SCR
 Folgende Punkte sind für die Umsetzung der Pipeline (SCRUM-10) erforderlich und sollen über Jira-Kommentar bzw. Teams angefragt werden:
 
 1. **An Zollern (über Product Owner (Kundenseite)):** Welche CAD-Formate werden im realen Anlagenkontext angeliefert? Liegt eine Beispieldatei (Förderer / Drehtisch o. ä.) vor?
-2. **An Gruppe B (Gruppe B, Gruppe B, Gruppe B):** Welcher LLM-Stack wird in SCRUM-40 angebunden? Kontextfenster? Strukturierte JSON-Eingabe oder Freitext-Prompt?
+2. **An Gruppe B (LLM-Stack):** Welcher LLM-Stack wird in SCRUM-40 angebunden? Kontextfenster? Strukturierte JSON-Eingabe oder Freitext-Prompt?
 3. **An Gruppe A (CAD-Parsing):** Stand SCRUM-29 (CAD-LLM-Interpretation) -- gibt es Erkenntnisse zu funktionierenden Eingabeformaten aus deren Tests?
 4. **An Gruppe C (SCRUM-10):** Soll das in 7. vorgeschlagene Zwischenformat als Ausgangsschema für den fiktiven Workflow verwendet werden?
 5. **An PO:** Liegt eine V5-Doku vor oder bleibt V4 die Referenz?

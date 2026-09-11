@@ -85,13 +85,13 @@
 
 | Punkt | Verantwortlich | Status |
 |-------|---------------|--------|
-| MCP Executor Endpunkt | Gruppe B (MCP) (Grp B) | BLOCKED |
-| Live MCP DOKU | Gruppe B (MCP) (Grp B) | BLOCKED |
+| MCP Executor Endpunkt | Gruppe B (MCP) | BLOCKED |
+| Live MCP DOKU | Gruppe B (MCP) | BLOCKED |
 | Jira Tickets (SCRUM-44 ff.) | Product Owner (Kundenseite) | OPEN |
 | Peer Review | Product Owner (Kundenseite) | PENDING |
 | Echte CAD-Daten von Zollern | PO | OPEN |
 | API Keys GPT + Gemini | Rustam | OPEN |
-| fe.screen-sim V5 verfuegbar | Gruppe B (MCP) (Grp B) | OPEN |
+| fe.screen-sim V5 verfuegbar | Gruppe B (MCP) | OPEN |
 
 ---
 

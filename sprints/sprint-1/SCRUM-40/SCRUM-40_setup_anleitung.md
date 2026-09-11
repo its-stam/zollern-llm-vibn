@@ -76,5 +76,5 @@ Pro Lauf werden zwei Dateien geschrieben:
 
 - **SCRUM-30** (Rustam): Eingabeformate definiert → CAD-Daten-Node hier direkt verwertbar
 - **SCRUM-31** (Rustam): Importformat-Bewertung → Agent B nutzt dieselbe Logik
-- **SCRUM-32** (Rustam/Gruppe C/Karim): Limitationen → fließen in Bericht-Abschnitt 5 ein
+- **SCRUM-32** (Gruppe C): Limitationen → fließen in Bericht-Abschnitt 5 ein
 - **SCRUM-10** (Gruppe C): Prototypischer Workflow → dieser Workflow ist die n8n-Umsetzung

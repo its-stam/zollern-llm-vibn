@@ -73,7 +73,7 @@ n8n Phase 2 Workflow (`workflow_phase2_hochregallager.json`, 895 Zeilen, 46 Node
 2. Rustam baut MCP-Client-Node gegen echte Endpunkte ✅ (workflow_phase2_hochregallager.json updated)
 3. Integrationstest: n8n → MCP → F.EE → Hochregal-Simulation
 
-**Bei Klärungsbedarf oder Verzögerung:** Rustam eskaliert an SM (Gruppe A (CAD)) oder PO (Product Owner (Kundenseite)).
+**Bei Klärungsbedarf oder Verzögerung:** Rustam eskaliert an Scrum Master oder PO (Product Owner (Kundenseite)).
 
 ---
 

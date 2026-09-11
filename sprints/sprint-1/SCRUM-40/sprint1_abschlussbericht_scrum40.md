@@ -2,7 +2,7 @@
 
 **Ticket:** SCRUM-40 | **Datum:** 01.05.2026 | **Bearbeiter:** Rustam Kohen
 **Projekt:** Zollern Machbarkeitsstudie virtuelle Inbetriebnahme + KI
-**Teamkontext:** Dieser Bericht beschreibt den n8n-/Agentic-Workflow (SCRUM-40), umgesetzt von Rustam Kohen als Teil des Projektteams. Am Gesamtprojekt mitgewirkt haben Gruppe B (MCP) und Gruppe B (LLM-Stack) (fe.screen-sim-Anbindung, MCP, LLM-Integration), Gruppe C (Workflow-Tests, Datenaufbereitung), Gruppe A (CAD) (Scrum, Datenerfassung), Gruppe A (CAD) (CAD-Modellierung) sowie Gruppe A, Gruppe A, Gruppe A und Gruppe A; Product Owner ist Product Owner (Kundenseite).
+**Teamkontext:** Dieser Bericht beschreibt den n8n-/Agentic-Workflow (SCRUM-40), umgesetzt von Rustam Kohen als Teil eines neunköpfigen Projektteams. Weitere Arbeitspakete im Gesamtprojekt: fe.screen-sim-Anbindung und MCP-Integration, Workflow-Tests und Datenaufbereitung, Scrum und Datenerfassung, CAD-Modellierung. Product Owner auf Kundenseite.
 
 ---
 
@@ -68,7 +68,7 @@ Logic Builder                        (sequential, braucht typisierte Surfaces)
     ↓
 Sammle alle Calls (Aggregate)
     ↓
-MCP Executor                         (Platzhalter bis Endpunkt von Gruppe B (MCP))
+MCP Executor                         (Platzhalter bis Endpunkt von Gruppe B)
     ↓
 Validator → bericht_phase2.md + .calls.json + .meta.json
 ```
@@ -87,7 +87,7 @@ Phase 3: configure_motionjoint (alle Objekte mit JointType-Tag)
 Phase 4: create_button (2×/Surface) + create_logic_object (1×/Surface) + link_objects (6×/Surface)
 ```
 
-**MCP-Spezifikation** (`MCP_TOOLS_SPEC.md`) an Gruppe B (MCP) (Grp B) übergeben.
+**MCP-Spezifikation** (`MCP_TOOLS_SPEC.md`) an Gruppe B (MCP) übergeben.
 
 ---
 
@@ -115,7 +115,7 @@ Phase 2 entstand aus der Analyse des F.EE-Demo-Videos. Erst nach dieser Analyse 
 
 Aktuell zwei Phasen lieferbereit. Phase 3 ist möglich und sinnvoll, hängt aber von zwei externen Abhängigkeiten ab:
 
-1. Gruppe B (MCP) (Grp B) liefert MCP-Endpunkt zu fe.screen-sim → Phase 2 läuft live
+1. Gruppe B (MCP) liefert MCP-Endpunkt zu fe.screen-sim → Phase 2 läuft live
 2. Grp A (SCRUM-29) liefert echten CAD-Parser → beide Phasen laufen mit echten Zollern-Daten
 
 Erst nach erstem echten Lauf ist klar, welche Erweiterungen Phase 3 braucht. Vorher wäre Phase 3 Spekulation.
@@ -133,10 +133,10 @@ Mögliche Phase-3-Inhalte: Webhook-Trigger (automatischer Start bei neuem CAD-Ei
 | v2 P0-Patches (Tag-Mapping, Retry, Persist) | DONE |
 | v2 P1-Patches (Tool-Use, System-Prompt, B/C-Split, SPS-Block) | DONE |
 | Phase 2 Workflow strukturell | DONE |
-| MCP_TOOLS_SPEC.md für Gruppe B (MCP) | DONE |
+| MCP_TOOLS_SPEC.md für Gruppe B | DONE |
 | Anthropic Credential in n8n eingetragen | OFFEN |
 | Erstdurchlauf Phase 1 mit fiktiven Daten | OFFEN |
-| MCP-Endpunkt Gruppe B (MCP) (Grp B) | OFFEN — externe Abhängigkeit |
+| MCP-Endpunkt Gruppe B (MCP) | OFFEN — externe Abhängigkeit |
 | Echtes CAD-Format Zollern (STEP vom Product Owner bestätigt) | OFFEN — Inventor-Tags unklar |
 | CAD-Parser-Anbindung SCRUM-29 (Grp A) | OFFEN — externe Abhängigkeit |
 
@@ -144,7 +144,7 @@ Mögliche Phase-3-Inhalte: Webhook-Trigger (automatischer Start bei neuem CAD-Ei
 
 ## Offene Fragen
 
-### Technisch — an Gruppe B (MCP) / F.EE
+### Technisch — an Gruppe B (MCP) / Simulationsanbieter
 
 | # | Frage | Impact |
 |---|-------|--------|
@@ -180,8 +180,8 @@ Mögliche Phase-3-Inhalte: Webhook-Trigger (automatischer Start bei neuem CAD-Ei
 
 | Ticket | Team | Was fehlt | Blockiert |
 |--------|------|-----------|-----------|
-| SCRUM-29 | Grp A (Gruppe A (CAD)) | CAD-Parser-Output als Eingabeformat | Echter Erstdurchlauf Phase 1 |
-| MCP-Endpunkt | Grp B (Gruppe B (MCP)) | fe.screen-sim MCP-Server live | Phase 2 Erstlauf |
+| SCRUM-29 | Grp A (CAD-Parsing) | CAD-Parser-Output als Eingabeformat | Echter Erstdurchlauf Phase 1 |
+| MCP-Endpunkt | Grp B (MCP) | fe.screen-sim MCP-Server live | Phase 2 Erstlauf |
 | SCRUM-41 | — | Förderer/Drehtisch als Referenzanlage | Validierung Beispieldaten |
 
 ---
@@ -221,7 +221,7 @@ Gleiche CAD-Eingabe (Förderer/Drehtisch)
 | Anthropic Credential + Phase-1-Erstlauf | hoch |
 | Multi-Model-Test (Claude / GPT-5 / Gemini 3) | hoch — Sommer-Anforderung |
 | VPN-Zugang Hr. Baumann klären | organisatorisch |
-| Phase-2-Erstlauf sobald MCP-Endpunkt steht | mittel — wartet auf Gruppe B (MCP) |
+| Phase-2-Erstlauf sobald MCP-Endpunkt steht | mittel — wartet auf Gruppe B |
 | Webhook-Trigger, Anbindung SCRUM-29 | mittel |
 | Output-Sync Teams/Sharepoint | niedrig |
 | Prompt Caching | niedrig — Master-Thesis-Relevanz |

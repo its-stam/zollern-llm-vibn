@@ -4,3 +4,7 @@
 .claude-flow/
 .swarm/
 node_modules/
+
+# Kompilierte PDFs (aus den .md erzeugt)
+*.pdf
+*.odt

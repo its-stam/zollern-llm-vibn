@@ -317,7 +317,7 @@ await mcp.link_objects({
 
 ---
 
-## Offene Fragen (für Gruppe B (MCP) / F.EE)
+## Offene Fragen (für Gruppe B, MCP)
 
 | # | Frage | Wer klärt | Impact |
 |---|-------|-----------|--------|

@@ -81,10 +81,10 @@ Team-Kommunikation (Entwürfe): `SCRUM-40_teams_nachrichten.txt`
 ## Verbindung zu anderen Tickets
 
 - **SCRUM-10** (Gruppe C): Prototypischer Workflow mit fiktiven Daten – SCRUM-40 ist die n8n-Umsetzung dieses Tickets
-- **SCRUM-29** (Gruppe A (CAD)): CAD-Dateninterpretation durch LLMs – liefert das Eingabeformat
+- **SCRUM-29** (Gruppe A): CAD-Dateninterpretation durch LLMs – liefert das Eingabeformat
 - **SCRUM-30** (Rustam, fertig): Datenformate-Analyse – Grundlage für Agent B
 - **SCRUM-31** (Rustam, fertig): Importformat-Bewertung – Logik in Agent B integriert
-- **SCRUM-32** (Rustam/Gruppe C/Karim, fertig): Limitationen – fließen in Bericht-Abschnitt 5 ein
+- **SCRUM-32** (Gruppe C, fertig): Limitationen – fließen in Bericht-Abschnitt 5 ein
 - **SCRUM-41**: Förderer/Drehtisch als Beispielanlage – fiktive Daten basieren darauf
 
 ## Status
@@ -161,6 +161,6 @@ SCRUM-40/
 └── runs_phase2/                           ← Phase-2-Läufe (.md + .calls.json + .meta.json)
 ```
 
-## Lizenz und NDA
+## Scope
 
-Academic feasibility study, HS Albstadt-Sigmaringen. No customer data: all runs use a synthetic test plant.
+Academic feasibility study. Contains no customer data: all runs use a synthetic test plant.

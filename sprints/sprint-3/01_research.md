@@ -27,7 +27,7 @@
 - **11 MCP Tools spezifiziert:** import_cad_file, get_all_objects, rename_object, set_object_type, set_property, configure_motionjoint, create_button, create_logic_object, link_objects, documentation_execute (optional), content_help/object_help (optional)
 - **Tool Calls fuer Foerderer-Szenario:** ~31 (6 rename + 6 type + 1 joint + 18 logic)
 - **Kritische Ausfuehrungsreihenfolge:** Phase 0 (import+get) -> Phase 1 (rename) -> Phase 2 (type+property) -> Phase 3 (joint) -> Phase 4 (buttons+logic+links)
-- **Status:** Architektonisch fertig. MCP Executor ist Platzhalter -- wartet auf Gruppe B (MCP) (Grp B) fuer live fe.screen-sim Endpunkt.
+- **Status:** Architektonisch fertig. MCP Executor ist Platzhalter -- wartet auf Gruppe B (MCP) fuer live fe.screen-sim Endpunkt.
 
 ---
 
@@ -149,7 +149,7 @@ Detail: `meetings/Erath_Agent_Architecture_2026-05-08.md`
 ## 5. Gaps & Open Questions
 
 ### Technische Gaps
-1. MCP Executor ist Platzhalter (wartet auf Gruppe B (MCP), Grp B)
+1. MCP Executor ist Platzhalter (wartet auf Gruppe B, Grp B)
 2. MCP DOKU nur statisches Markdown (kein live Server)
 3. Kein DB/Wissen-System (stateless, kein Lernen)
 4. Rules in Prompts eingebettet (nicht versioniert/testbar)

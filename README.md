@@ -1,20 +1,59 @@
-# ZOLLERN — LLM + Virtuelle Inbetriebnahme (VIBN)
+# LLM Agents for Virtual Commissioning
 
-Machbarkeitsstudie zur Einbindung eines Large Language Models in die virtuelle Inbetriebnahme (VIBN) mit der Simulationssoftware fe.screen-sim V5. Dieses Repo bündelt das technische Arbeitsprodukt und die Abgaben des Projekts.
+A two-phase agentic workflow that reads a CAD assembly description, classifies every
+component through parallel LLM agents with enforced tool schemas, and emits a
+structured feasibility report for an industrial simulation environment
+(fe.screen-sim V5). Built as a university feasibility study with an industrial
+partner, spring 2026.
 
-## Inhalt
+## What it does
 
-- `sprints/sprint-1/SCRUM-30/` — CAD-Datenformate (Analyse der Eignung für LLM-Verarbeitung)
-- `sprints/sprint-1/SCRUM-31/` — Bewertung der LLM-Generierbarkeit von Simulationsartefakten
-- `sprints/sprint-1/SCRUM-32/` — Limitationen des LLM-Einsatzes
-- `sprints/sprint-1/SCRUM-40/` — n8n-Agent-Workflows (Analyse + Transform), Provider-Varianten (Claude/OpenAI/Gemini), Berichte, MCP-Tools-Spezifikation, Setup-Anleitung
-- `sprints/sprint-3/` — Architektur, Research, Pipeline-Trace, Architektur-Mapping, MCP-Anforderungen, LLM-Vergleich (US9)
-- `abgaben/` — Vorgehens-Dokumentation, Abschlusspräsentation (V1)
+| Phase | Input | Agents | Output |
+|---|---|---|---|
+| 1 Analyse | CAD assembly description | classification, function, material | feasibility report (Markdown) with component table, open interface questions |
+| 2 Transform | phase 1 report | logic design, joint mapping, tool calls | simulation configuration via MCP tool calls |
+
+Every agent answer is forced through a declared tool schema
+(`submit_hr_klassifikation`, `submit_lagerlogik`, …), so the pipeline never parses
+free text. The MCP executor is a documented placeholder: the simulation vendor's
+live endpoint was an external dependency that stayed open.
+
+## Numbers
+
+| Measurement | Value |
+|---|---|
+| n8n workflows | 5 (2 pipeline phases, 3 provider variants) |
+| Workflow nodes, total | 126 |
+| MCP tools specified | 11 |
+| LLM providers compared on the same task | 3 (Claude, GPT, Gemini) |
+| Sprint deliverables in this repo | 4 tickets, 3 sprints |
+
+## Repo map
+
+- `sprints/sprint-1/SCRUM-30/` — which CAD exchange formats survive LLM processing, and why (STEP, STL, Collada, ISO 10303)
+- `sprints/sprint-1/SCRUM-31/` — what a language model can and cannot generate for a simulation artefact
+- `sprints/sprint-1/SCRUM-32/` — limitations, stated as limitations rather than worked around
+- `sprints/sprint-1/SCRUM-40/` — the workflows themselves, the MCP tool specification, the generated reports, a setup guide
+- `sprints/sprint-3/` — architecture, pipeline trace, model comparison (US9), prompts
 
 ## Stack
 
-n8n (Workflow-Orchestrierung), LLM-APIs (Claude/OpenAI/Gemini) sowie lokales LLM, fe.screen-sim V5, Tool-Anbindung via MCP.
+n8n for orchestration, HTTP tool calls against Claude / OpenAI / Gemini, MCP as the
+interface to the simulation environment, Markdown reports as the artefact between
+phases.
 
-## Hinweis
+## Honest scope
 
-Privates Projekt-Repo, nur für das Projektteam. NDA-gebunden, nicht öffentlich.
+- This is a **feasibility study**, not a production system. Phase 1 runs end to end;
+  phase 2 is structurally complete but waits on a live simulation endpoint.
+- **No customer data.** Every run uses a synthetic test plant
+  (`Foerderer_Drehtisch_v1`). No CAD files, no PLC addresses, no pricing.
+- **Team project.** This repo holds the workflow track (SCRUM-40 and the analysis
+  tickets feeding it), written by Rustam Kohen. Other tracks (CAD parsing, the
+  simulation-side MCP endpoint, testing) belong to other team members and are
+  referenced by role, not by name.
+- Credentials in the workflow JSON are n8n credential references, not values.
+
+## License
+
+Coursework, published for portfolio purposes. No warranty, no support.

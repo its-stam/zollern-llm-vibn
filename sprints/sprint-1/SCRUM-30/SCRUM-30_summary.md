@@ -41,7 +41,7 @@ Konkrete Tool-Auswahl gehört in SCRUM-10 (prototypischer Workflow).
 ## Benötigte Inputs (per Jira/Teams anfragen)
 
 1. PO/Zollern: Beispiel-CAD-Datei und reales Anlieferungsformat
-2. Gruppe B (Gruppe B/Gruppe B/Gruppe B): LLM-Stack, Kontextfenster, Eingabe-Schema
+2. Gruppe B (LLM-Stack): LLM-Stack, Kontextfenster, Eingabe-Schema
 3. Gruppe A (CAD-Parsing): Erkenntnisse SCRUM-29
 4. Gruppe C (SCRUM-10): Verwendung des vorgeschlagenen Zwischenformats?
 
