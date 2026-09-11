@@ -40,6 +40,7 @@ live endpoint was an external dependency that stayed open.
 - `sprints/sprint-1/SCRUM-31/` — what a language model can and cannot generate for a simulation artefact
 - `sprints/sprint-1/SCRUM-32/` — limitations, stated as limitations rather than worked around
 - `sprints/sprint-1/SCRUM-40/` — the workflows themselves, the MCP tool specification, the generated reports, a setup guide
+- `sprints/sprint-2/` — a pointer: the Sprint 2 work is SCRUM-40 phase 2, filed under sprint-1
 - `sprints/sprint-3/` — architecture, pipeline trace, model comparison (US9), prompts
 
 ## Stack
